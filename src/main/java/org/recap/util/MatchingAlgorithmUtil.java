@@ -966,7 +966,9 @@ public class MatchingAlgorithmUtil {
         stopWatch.start();
         List<Integer> bibs = new ArrayList<>();
         try {
-            identityMap.entrySet().stream().map(b -> b.getKey()).forEach(bibs::add);
+            for (Map.Entry<Integer, UUID> b: identityMap.entrySet()) {
+                bibs.add(b.getKey());
+            }
             List<BibliographicEntity> bibliographicEntityList = bibliographicDetailsRepository.findByIdIn(bibs);
             List<BibliographicEntity> bibliographicEntitiesToUpdate = bibliographicEntityList.stream()
                     .map(bibliographicEntity -> {
@@ -984,7 +986,7 @@ public class MatchingAlgorithmUtil {
             stopWatch.stop();
             logger.info("Time taken to update Matching Identity In Db :  {} seconds ", stopWatch.getTotalTimeSeconds());
         } catch (Exception e) {
-            logger.info("Exception occured while processing final identity grouping map - {} ", e.getMessage());
+            logger.info("Exception occured while updating Matching Identity In Db - {} ", e.getMessage());
         }
     }
 }
