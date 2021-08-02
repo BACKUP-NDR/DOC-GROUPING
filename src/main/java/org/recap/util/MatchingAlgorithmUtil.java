@@ -963,28 +963,30 @@ public class MatchingAlgorithmUtil {
 
     public void updateMatchingIdentityInDb(Map<Integer, UUID> identityMap) {
         StopWatch stopWatch = new StopWatch();
-        stopWatch.start();
         List<Integer> bibs = new ArrayList<>();
+        StopWatch stopWatchUpdateDb = new StopWatch();
         try {
+            stopWatch.start();
             for (Map.Entry<Integer, UUID> b: identityMap.entrySet()) {
                 bibs.add(b.getKey());
             }
             List<BibliographicEntity> bibliographicEntityList = bibliographicDetailsRepository.findByIdIn(bibs);
-            List<BibliographicEntity> bibliographicEntitiesToUpdate = bibliographicEntityList.stream()
-                    .map(bibliographicEntity -> {
-                        bibliographicEntity.setMatchingIdentity(identityMap.get(bibliographicEntity).toString());
-                        bibliographicEntity.setLastUpdatedBy("GroupingCGDProcess");
-                        bibliographicEntity.setLastUpdatedDate(new Date());
-                        return bibliographicEntity;
-                    })
-                    .collect(Collectors.toList());
-            StopWatch stopWatchUpdateDb = new StopWatch();
-            stopWatch.start();
-            bibliographicDetailsRepository.saveAll(bibliographicEntitiesToUpdate);
-            stopWatch.stop();
-            logger.info("Time taken to db call bibliographicEntitiesToUpdate :  {} seconds ", stopWatchUpdateDb.getTotalTimeSeconds());
-            stopWatch.stop();
-            logger.info("Time taken to update Matching Identity In Db :  {} seconds ", stopWatch.getTotalTimeSeconds());
+            if (bibliographicEntityList.size() >0 ) {
+                List<BibliographicEntity> bibliographicEntitiesToUpdate = bibliographicEntityList.stream()
+                        .map(bibliographicEntity -> {
+                            bibliographicEntity.setMatchingIdentity(identityMap.get(bibliographicEntity.getId()).toString());
+                            bibliographicEntity.setLastUpdatedBy("GroupingCGDProcess");
+                            bibliographicEntity.setLastUpdatedDate(new Date());
+                            return bibliographicEntity;
+                        })
+                        .collect(Collectors.toList());
+                stopWatchUpdateDb.start();
+                bibliographicDetailsRepository.saveAll(bibliographicEntitiesToUpdate);
+                stopWatchUpdateDb.stop();
+                logger.info("Time taken to db call bibliographicEntitiesToUpdate :  {} seconds ", stopWatchUpdateDb.getTotalTimeSeconds());
+                stopWatch.stop();
+                logger.info("Time taken to update Matching Identity In Db :  {} seconds ", stopWatch.getTotalTimeSeconds());
+            }
         } catch (Exception e) {
             logger.info("Exception occured while updating Matching Identity In Db - {} ", e.getMessage());
         }
