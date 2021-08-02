@@ -505,10 +505,11 @@ public class MatchingAlgorithmHelperService {
         } catch (Exception e) {
             logger.info("Exception occured - {}", e.getMessage());
         } finally {
-            Map<UUID, LinkedHashSet<Integer>> finalIdentityGroupingMap = matchingAlgorithmUtil.processFinalIdentityGroupingMap(identityMap);
-            matchingAlgorithmUtil.updateMatchingIdentityInDb(finalIdentityGroupingMap);
+            //Map<UUID, LinkedHashSet<Integer>> finalIdentityGroupingMap = matchingAlgorithmUtil.processFinalIdentityGroupingMap(identityMap);
+            // matchingAlgorithmUtil.updateMatchingIdentityInDb(finalIdentityGroupingMap);
+            matchingAlgorithmUtil.updateMatchingIdentityInDb(identityMap);
             stopWatch.stop();
-            logger.info("Time taken to populate Matching Identifier :  {} seconds ",stopWatch.getTotalTimeSeconds());
+            logger.info("Time taken to populate Matching Identifier :  {} seconds ", stopWatch.getTotalTimeSeconds());
         }
     }
 }

@@ -14,10 +14,7 @@ import org.recap.PropertyKeyConstants;
 import org.recap.ScsbCommonConstants;
 import org.recap.ScsbConstants;
 import org.recap.matchingalgorithm.MatchingCounter;
-import org.recap.model.jpa.MatchingBibEntity;
-import org.recap.model.jpa.MatchingMatchPointsEntity;
-import org.recap.model.jpa.ReportDataEntity;
-import org.recap.model.jpa.ReportEntity;
+import org.recap.model.jpa.*;
 import org.recap.repository.jpa.*;
 import org.recap.service.accession.SolrIndexService;
 import org.slf4j.Logger;
@@ -34,7 +31,6 @@ import java.io.IOException;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.recap.ScsbConstants.*;
@@ -936,12 +932,16 @@ public class MatchingAlgorithmUtil {
         return finalIdentityGroupingMap;
     }
 
-    public void updateMatchingIdentityInDb(Map<UUID, LinkedHashSet<Integer>> collect) {
+/*    public void updateMatchingIdentityInDb(Map<UUID, LinkedHashSet<Integer>> collect) {
         StringBuilder finalBibIdIdentifierQueryString = new StringBuilder();
         StringBuilder bibIds = new StringBuilder();
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
+        Set<Integer> bibSet = new HashSet<>();
         try {
+            collect.values().forEach(bibs -> bibs.forEach(b -> bibSet.add(b)));
+            List<BibliographicEntity> bibliographicEntitiesToUpdate = bibliographicDetailsRepository.findByIdIn((List<Integer>) bibSet);
+            bibliographicDetailsRepository.saveAll(bibliographicEntitiesToUpdate);
             collect.entrySet().stream().forEach(e -> {
                 e.getValue().stream().forEach(bibId -> {
                     finalBibIdIdentifierQueryString.append("WHEN " + bibId + " THEN '" + e.getKey().toString() + "'").append(" ");
@@ -955,7 +955,34 @@ public class MatchingAlgorithmUtil {
 
             jdbcTemplate.update(query);
             stopWatch.stop();
-            logger.info("Time taken to update Matching Identity In Db :  {} seconds ",stopWatch.getTotalTimeSeconds());
+            logger.info("Time taken to update Matching Identity In Db :  {} seconds ", stopWatch.getTotalTimeSeconds());
+        } catch (Exception e) {
+            logger.info("Exception occured while processing final identity grouping map - {} ", e.getMessage());
+        }
+    }*/
+
+    public void updateMatchingIdentityInDb(Map<Integer, UUID> identityMap) {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        Set<Integer> bibSet = new HashSet<>();
+        try {
+            identityMap.entrySet().stream().map(b -> b.getKey()).forEach(bibSet::add);
+            List<BibliographicEntity> bibliographicEntityList = bibliographicDetailsRepository.findByIdIn((List<Integer>) bibSet);
+            List<BibliographicEntity> bibliographicEntitiesToUpdate = bibliographicEntityList.stream()
+                    .map(bibliographicEntity -> {
+                        bibliographicEntity.setMatchingIdentity(identityMap.get(bibliographicEntity).toString());
+                        bibliographicEntity.setLastUpdatedBy("GroupingCGDProcess");
+                        bibliographicEntity.setLastUpdatedDate(new Date());
+                        return bibliographicEntity;
+                    })
+                    .collect(Collectors.toList());
+            StopWatch stopWatchUpdateDb = new StopWatch();
+            stopWatch.start();
+            bibliographicDetailsRepository.saveAll(bibliographicEntitiesToUpdate);
+            stopWatch.stop();
+            logger.info("Time taken to db call bibliographicEntitiesToUpdate :  {} seconds ", stopWatchUpdateDb.getTotalTimeSeconds());
+            stopWatch.stop();
+            logger.info("Time taken to update Matching Identity In Db :  {} seconds ", stopWatch.getTotalTimeSeconds());
         } catch (Exception e) {
             logger.info("Exception occured while processing final identity grouping map - {} ", e.getMessage());
         }
