@@ -443,7 +443,9 @@ public class MatchingAlgorithmHelperService {
         int totalPagesCount = (int) (countOfRecordNum / batchSize);
         logger.info(ScsbConstants.TOTAL_PAGES + "{}", totalPagesCount);
         int pageNum = 0;
+        logger.info("Batch count - {}", totalPagesCount);
         while (pageNum < totalPagesCount + 1) {
+            logger.info("Executing the current Batch count for Monograph- {} - Batch count - {} -", pageNum, totalPagesCount);
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities;
             if (isPendingMatch) {
@@ -465,6 +467,7 @@ public class MatchingAlgorithmHelperService {
         logger.info(ScsbConstants.TOTAL_PAGES + "{}", totalPagesCount);
         int pageNum = 0;
         while (pageNum < totalPagesCount + 1) {
+            logger.info("Executing the current Batch count for MVMs- {} - Batch count - {} -", pageNum, totalPagesCount);
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingMVMs(ScsbCommonConstants.BIB_ID, from, batchSize);
             populateMatchingIdentifier(reportDataEntities);
@@ -480,6 +483,7 @@ public class MatchingAlgorithmHelperService {
         logger.info(ScsbConstants.TOTAL_PAGES + "{}", totalPagesCount);
         int pageNum = 0;
         while (pageNum < totalPagesCount + 1) {
+            logger.info("Executing the current Batch count for Serials - {} - Batch count - {} -", pageNum, totalPagesCount);
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingSerials(ScsbCommonConstants.BIB_ID, from, batchSize);
             populateMatchingIdentifier(reportDataEntities);
@@ -492,6 +496,8 @@ public class MatchingAlgorithmHelperService {
         Set<Set<Integer>> finalBibSetOfSets = reportDataEntities.parallelStream().map(reportDataEntity -> getBibIdSetFromString(reportDataEntity)).collect(Collectors.toSet());
         Map<UUID, Set<Integer>> bibIdMap = new LinkedHashMap<>();
         Map<Integer, UUID> identityMap = new LinkedHashMap<>();
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
         try {
             finalBibSetOfSets.stream().forEach(bibIdSet -> {
                 matchingAlgorithmUtil.processBibIdGroupingMap(bibIdSet, identityMap, bibIdMap);
@@ -501,6 +507,8 @@ public class MatchingAlgorithmHelperService {
         } finally {
             Map<UUID, LinkedHashSet<Integer>> finalIdentityGroupingMap = matchingAlgorithmUtil.processFinalIdentityGroupingMap(identityMap);
             matchingAlgorithmUtil.updateMatchingIdentityInDb(finalIdentityGroupingMap);
+            stopWatch.stop();
+            logger.info("Time taken to populate Matching Identifier :  {} seconds ",stopWatch.getTotalTimeSeconds());
         }
     }
 }

@@ -939,6 +939,8 @@ public class MatchingAlgorithmUtil {
     public void updateMatchingIdentityInDb(Map<UUID, LinkedHashSet<Integer>> collect) {
         StringBuilder finalBibIdIdentifierQueryString = new StringBuilder();
         StringBuilder bibIds = new StringBuilder();
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
         try {
             collect.entrySet().stream().forEach(e -> {
                 e.getValue().stream().forEach(bibId -> {
@@ -952,6 +954,8 @@ public class MatchingAlgorithmUtil {
                     "WHERE BIBLIOGRAPHIC_ID IN (" + bibIds.substring(0, bibIds.length() - 1) + ")";
 
             jdbcTemplate.update(query);
+            stopWatch.stop();
+            logger.info("Time taken to update Matching Identity In Db :  {} seconds ",stopWatch.getTotalTimeSeconds());
         } catch (Exception e) {
             logger.info("Exception occured while processing final identity grouping map - {} ", e.getMessage());
         }
