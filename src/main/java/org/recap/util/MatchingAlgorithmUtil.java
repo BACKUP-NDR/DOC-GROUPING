@@ -964,10 +964,10 @@ public class MatchingAlgorithmUtil {
     public void updateMatchingIdentityInDb(Map<Integer, UUID> identityMap) {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
-        Set<Integer> bibSet = new HashSet<>();
+        List<Integer> bibs = new ArrayList<>();
         try {
-            identityMap.entrySet().stream().map(b -> b.getKey()).forEach(bibSet::add);
-            List<BibliographicEntity> bibliographicEntityList = bibliographicDetailsRepository.findByIdIn((List<Integer>) bibSet);
+            identityMap.entrySet().stream().map(b -> b.getKey()).forEach(bibs::add);
+            List<BibliographicEntity> bibliographicEntityList = bibliographicDetailsRepository.findByIdIn(bibs);
             List<BibliographicEntity> bibliographicEntitiesToUpdate = bibliographicEntityList.stream()
                     .map(bibliographicEntity -> {
                         bibliographicEntity.setMatchingIdentity(identityMap.get(bibliographicEntity).toString());
