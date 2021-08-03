@@ -942,7 +942,7 @@ public class MatchingAlgorithmUtil {
         StopWatch stopWatch = new StopWatch();
         StopWatch stopWatchUpdateDb = new StopWatch();
         try {
-            stopWatchUpdateDb.start();
+            stopWatch.start();
             collect.entrySet().stream().forEach(e -> {
                 e.getValue().stream().forEach(bibId -> {
                     finalBibIdIdentifierQueryString.append("WHEN " + bibId + " THEN '" + e.getKey().toString() + "'").append(" ");
@@ -954,12 +954,12 @@ public class MatchingAlgorithmUtil {
                     "SET MATCHING_IDENTITY = ( CASE BIBLIOGRAPHIC_ID " + finalBibIdIdentifierQueryString + " END) " +
                     "WHERE BIBLIOGRAPHIC_ID IN (" + bibIds.substring(0, bibIds.length() - 1) + ")";
 
-            logger.info("Time taken to build query string Matching Identity :  {} seconds ",stopWatchUpdateDb.getTotalTimeSeconds());
-            stopWatchUpdateDb.stop();
-            stopWatch.start();
-            jdbcTemplate.update(query);
             stopWatch.stop();
-            logger.info("Time taken to update Matching Identity In Db :  {} seconds ",stopWatch.getTotalTimeSeconds());
+            logger.info("Time taken to build query string Matching Identity :  {} seconds ",stopWatch.getTotalTimeSeconds());
+            stopWatchUpdateDb.start();
+            jdbcTemplate.update(query);
+            stopWatchUpdateDb.stop();
+            logger.info("Time taken to update Matching Identity In Db :  {} seconds ",stopWatchUpdateDb.getTotalTimeSeconds());
         } catch (Exception e) {
             logger.info("Exception occured while processing final identity grouping map - {} ", e.getMessage());
         }
