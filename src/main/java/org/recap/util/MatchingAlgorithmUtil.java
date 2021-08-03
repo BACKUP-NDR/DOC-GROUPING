@@ -957,7 +957,7 @@ public class MatchingAlgorithmUtil {
             stopWatch.stop();
             logger.info("Time taken to build query string Matching Identity :  {} seconds ",stopWatch.getTotalTimeSeconds());
             stopWatchUpdateDb.start();
-            jdbcTemplate.update(query);
+            jdbcTemplate.batchUpdate(query);
             stopWatchUpdateDb.stop();
             logger.info("Time taken to update Matching Identity In Db :  {} seconds ",stopWatchUpdateDb.getTotalTimeSeconds());
         } catch (Exception e) {
