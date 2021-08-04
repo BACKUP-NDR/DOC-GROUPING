@@ -433,6 +433,7 @@ public class MatchingAlgorithmHelperService {
     }
 
     public String groupBibsForMonograph(Integer batchSize, Boolean isPendingMatch) {
+        StopWatch stopWatch = new StopWatch();
         long countOfRecordNum;
         if (isPendingMatch) {
             countOfRecordNum = reportDataDetailsRepository.getCountOfRecordNumForMatchingPendingMonograph(ScsbCommonConstants.BIB_ID);
@@ -446,6 +447,7 @@ public class MatchingAlgorithmHelperService {
         logger.info("Batch count - {}", totalPagesCount);
         while (pageNum < totalPagesCount + 1) {
             logger.info("Executing the current Batch count for Monograph- {} - Batch count - {} -", pageNum, totalPagesCount);
+            stopWatch.start();
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities;
             if (isPendingMatch) {
@@ -455,12 +457,15 @@ public class MatchingAlgorithmHelperService {
             }
             populateMatchingIdentifier(reportDataEntities);
             reportDataEntities.clear();
+            stopWatch.stop();
+            logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
             pageNum++;
         }
         return "Success";
     }
 
     public void groupBibsForMVMS(Integer batchSize) {
+        StopWatch stopWatch = new StopWatch();
         long countOfRecordNum = reportDataDetailsRepository.getCountOfRecordNumForMatchingMVMs(ScsbCommonConstants.BIB_ID);
         logger.info(ScsbConstants.TOTAL_RECORDS + "{}", countOfRecordNum);
         int totalPagesCount = (int) (countOfRecordNum / batchSize);
@@ -468,15 +473,19 @@ public class MatchingAlgorithmHelperService {
         int pageNum = 0;
         while (pageNum < totalPagesCount + 1) {
             logger.info("Executing the current Batch count for MVMs- {} - Batch count - {} -", pageNum, totalPagesCount);
+            stopWatch.start();
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingMVMs(ScsbCommonConstants.BIB_ID, from, batchSize);
             populateMatchingIdentifier(reportDataEntities);
             reportDataEntities.clear();
+            stopWatch.stop();
+            logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
             pageNum++;
         }
     }
 
     public void groupBibsForSerials(Integer batchSize) {
+        StopWatch stopWatch = new StopWatch();
         long countOfRecordNum = reportDataDetailsRepository.getCountOfRecordNumForMatchingSerials(ScsbCommonConstants.BIB_ID);
         logger.info(ScsbConstants.TOTAL_RECORDS + "{}", countOfRecordNum);
         int totalPagesCount = (int) (countOfRecordNum / batchSize);
@@ -484,10 +493,13 @@ public class MatchingAlgorithmHelperService {
         int pageNum = 0;
         while (pageNum < totalPagesCount + 1) {
             logger.info("Executing the current Batch count for Serials - {} - Batch count - {} -", pageNum, totalPagesCount);
+            stopWatch.start();
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingSerials(ScsbCommonConstants.BIB_ID, from, batchSize);
             populateMatchingIdentifier(reportDataEntities);
             reportDataEntities.clear();
+            stopWatch.stop();
+            logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
             pageNum++;
         }
     }

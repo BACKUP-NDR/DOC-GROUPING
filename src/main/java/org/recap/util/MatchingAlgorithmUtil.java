@@ -937,13 +937,28 @@ public class MatchingAlgorithmUtil {
     }
 
     public void updateMatchingIdentityInDb(Map<UUID, LinkedHashSet<Integer>> collect) {
+        StopWatch stopWatch = new StopWatch();
+        try {
+            stopWatch.start();
+            int limit = 1000;
+            for (int i = 1; i <=10 ; i++) {
+                updateInBatches(collect, (i-1)*1000, limit);
+            }
+            stopWatch.stop();
+            logger.info("Time taken to update Matching Identity In Db in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
+        } catch (Exception e) {
+            logger.info("Exception occured while processing updating the final grouping map to db - {} ", e.getMessage());
+        }
+    }
+
+    public void updateInBatches(Map<UUID, LinkedHashSet<Integer>> collect, int skip, int limit) {
         StringBuilder finalBibIdIdentifierQueryString = new StringBuilder();
         StringBuilder bibIds = new StringBuilder();
         StopWatch stopWatch = new StopWatch();
         StopWatch stopWatchUpdateDb = new StopWatch();
         try {
             stopWatch.start();
-            collect.entrySet().stream().forEach(e -> {
+            collect.entrySet().stream().skip(skip).limit(limit).forEach(e -> {
                 e.getValue().stream().forEach(bibId -> {
                     finalBibIdIdentifierQueryString.append("WHEN " + bibId + " THEN '" + e.getKey().toString() + "'").append(" ");
                     bibIds.append(bibId).append(",");
@@ -959,9 +974,9 @@ public class MatchingAlgorithmUtil {
             stopWatchUpdateDb.start();
             jdbcTemplate.batchUpdate(query);
             stopWatchUpdateDb.stop();
-            logger.info("Time taken to update Matching Identity In Db :  {} seconds ",stopWatchUpdateDb.getTotalTimeSeconds());
+            logger.info("Time taken to update Matching Identity In Db in 1000s:  {} seconds ",stopWatchUpdateDb.getTotalTimeSeconds());
         } catch (Exception e) {
-            logger.info("Exception occured while processing final identity grouping map - {} ", e.getMessage());
+            logger.info("Exception occured while processing updating the final grouping map to db in batches - {} ", e.getMessage());
         }
     }
 }
