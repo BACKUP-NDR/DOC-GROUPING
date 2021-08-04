@@ -940,9 +940,14 @@ public class MatchingAlgorithmUtil {
         StopWatch stopWatch = new StopWatch();
         try {
             stopWatch.start();
-            int limit = 1000;
-            for (int i = 1; i <=10 ; i++) {
-                updateInBatches(collect, (i-1)*1000, limit);
+            int count =  collect.size() / 1000;
+            int page= 0;
+            if ( collect.size() % 1000 != 0){
+                count++;
+            }
+            while(page <= count){
+                updateInBatches(collect, page*1000, 1000 );
+                page++;
             }
             stopWatch.stop();
             logger.info("Time taken to update Matching Identity In Db in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
