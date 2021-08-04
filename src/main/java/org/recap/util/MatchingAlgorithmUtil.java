@@ -940,12 +940,12 @@ public class MatchingAlgorithmUtil {
         StopWatch stopWatch = new StopWatch();
         try {
             stopWatch.start();
-            int count =  collect.size() / 1000;
+            int count =  collect.size() / 1000;  // 5502
             int page= 0;
             if ( collect.size() % 1000 != 0){
                 count++;
             }
-            while(page <= count){
+            while(page < count){
                 updateInBatches(collect, page*1000, 1000 );
                 page++;
             }
