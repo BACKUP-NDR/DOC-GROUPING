@@ -503,7 +503,7 @@ public class MatchingAlgorithmHelperService {
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingSerials(ScsbCommonConstants.BIB_ID, from, batchSize);
             populateMatchingIdentifier(reportDataEntities);
-            reportDataEntities.clear();
+           // reportDataEntities.clear();
             stopWatch.stop();
             logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
             pageNum++;
@@ -534,7 +534,7 @@ public class MatchingAlgorithmHelperService {
             finalBibSetOfSets.forEach(bibIdSet -> {
                 matchingAlgorithmUtil.processBibIdGroupingMap(bibIdSet, identityMap, bibIdMap, bibIdAndIdentifierMap);
             });
-            bibIdAndIdentifierMap.clear();
+         //   bibIdAndIdentifierMap.clear();
         } catch (Exception e) {
             logger.info("Exception occured - {}", e.getMessage());
         } finally {
