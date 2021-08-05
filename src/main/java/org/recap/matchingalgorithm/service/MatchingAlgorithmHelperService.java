@@ -462,7 +462,7 @@ public class MatchingAlgorithmHelperService {
                 reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingMonographs(ScsbCommonConstants.BIB_ID, from, batchSize);
             }
             populateMatchingIdentifier(reportDataEntities);
-            reportDataEntities.clear();
+           // reportDataEntities.clear();
             stopWatch.stop();
             logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
             pageNum++;
@@ -503,7 +503,7 @@ public class MatchingAlgorithmHelperService {
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingSerials(ScsbCommonConstants.BIB_ID, from, batchSize);
             populateMatchingIdentifier(reportDataEntities);
-           // reportDataEntities.clear();
+            reportDataEntities.clear();
             stopWatch.stop();
             logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
             pageNum++;
@@ -515,9 +515,12 @@ public class MatchingAlgorithmHelperService {
         Map<String, Set<Integer>> bibIdMap = new LinkedHashMap<>();
         Map<Integer, String> identityMap = new LinkedHashMap<>();
         StopWatch stopWatch = new StopWatch();
-        stopWatch.start();
+        StopWatch stopWatchQuery = new StopWatch();
+        StopWatch stopWatchProcess = new StopWatch();
         try {
-            Set<Integer> bidIds = finalBibSetOfSets.stream().flatMap(Collection::stream).collect(Collectors.toSet());
+            stopWatch.start();
+            stopWatchQuery.start();
+            Set<Integer> bidIds = finalBibSetOfSets.parallelStream().flatMap(Collection::stream).collect(Collectors.toSet());
             MapSqlParameterSource parameters = new MapSqlParameterSource();
             parameters.addValue("ids", bidIds);
             String sql = "select BIBLIOGRAPHIC_ID, MATCHING_IDENTITY from bibliographic_t where BIBLIOGRAPHIC_ID IN (:ids)";
@@ -531,9 +534,15 @@ public class MatchingAlgorithmHelperService {
                         return results;
                     });
 
+            stopWatchQuery.stop();
+            logger.info("Time taken to  build bibIdAndIdentifierMap:  {} seconds ",stopWatchQuery.getTotalTimeSeconds());
+
+            stopWatchProcess.start();
             finalBibSetOfSets.forEach(bibIdSet -> {
                 matchingAlgorithmUtil.processBibIdGroupingMap(bibIdSet, identityMap, bibIdMap, bibIdAndIdentifierMap);
             });
+            stopWatchProcess.stop();
+            logger.info("Time taken to process Matching Identifier grouping iteration:  {} seconds ",stopWatchProcess.getTotalTimeSeconds());
          //   bibIdAndIdentifierMap.clear();
         } catch (Exception e) {
             logger.info("Exception occured - {}", e.getMessage());
