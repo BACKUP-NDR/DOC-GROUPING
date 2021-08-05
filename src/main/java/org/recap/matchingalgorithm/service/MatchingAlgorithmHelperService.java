@@ -26,11 +26,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.solr.core.SolrTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -64,6 +68,8 @@ public class MatchingAlgorithmHelperService {
     private ActiveMqQueuesInfo activeMqQueuesInfo;
     @Autowired
     private CommonUtil commonUtil;
+    @Autowired
+    NamedParameterJdbcTemplate jdbcTemplate;
 
     /**
      * Gets logger.
@@ -505,19 +511,34 @@ public class MatchingAlgorithmHelperService {
     }
 
     private void populateMatchingIdentifier(List<ReportDataEntity> reportDataEntities) {
-        Set<Set<Integer>> finalBibSetOfSets = reportDataEntities.parallelStream().map(reportDataEntity -> getBibIdSetFromString(reportDataEntity)).collect(Collectors.toSet());
-        Map<UUID, Set<Integer>> bibIdMap = new LinkedHashMap<>();
-        Map<Integer, UUID> identityMap = new LinkedHashMap<>();
+        Set<Set<Integer>> finalBibSetOfSets = reportDataEntities.parallelStream().map(this::getBibIdSetFromString).collect(Collectors.toSet());
+        Map<String, Set<Integer>> bibIdMap = new LinkedHashMap<>();
+        Map<Integer, String> identityMap = new LinkedHashMap<>();
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
         try {
-            finalBibSetOfSets.stream().forEach(bibIdSet -> {
-                matchingAlgorithmUtil.processBibIdGroupingMap(bibIdSet, identityMap, bibIdMap);
+            Set<Integer> bidIds = finalBibSetOfSets.stream().flatMap(Collection::stream).collect(Collectors.toSet());
+            MapSqlParameterSource parameters = new MapSqlParameterSource();
+            parameters.addValue("ids", bidIds);
+            String sql = "select BIBLIOGRAPHIC_ID, MATCHING_IDENTITY from bibliographic_t where BIBLIOGRAPHIC_ID IN (:ids)";
+
+            Map<Integer, String> bibIdAndIdentifierMap =   jdbcTemplate.query(sql,
+                    parameters, (ResultSet rs) -> {
+                        HashMap<Integer,String> results = new HashMap<>();
+                        while (rs.next()) {
+                            results.put(rs.getInt("BIBLIOGRAPHIC_ID"), rs.getString("MATCHING_IDENTITY"));
+                        }
+                        return results;
+                    });
+
+            finalBibSetOfSets.forEach(bibIdSet -> {
+                matchingAlgorithmUtil.processBibIdGroupingMap(bibIdSet, identityMap, bibIdMap, bibIdAndIdentifierMap);
             });
+            bibIdAndIdentifierMap.clear();
         } catch (Exception e) {
             logger.info("Exception occured - {}", e.getMessage());
         } finally {
-            Map<UUID, LinkedHashSet<Integer>> finalIdentityGroupingMap = matchingAlgorithmUtil.processFinalIdentityGroupingMap(identityMap);
+            Map<String, LinkedHashSet<Integer>> finalIdentityGroupingMap = matchingAlgorithmUtil.processFinalIdentityGroupingMap(identityMap);
             matchingAlgorithmUtil.updateMatchingIdentityInDb(finalIdentityGroupingMap);
             stopWatch.stop();
             logger.info("Time taken to populate Matching Identifier :  {} seconds ",stopWatch.getTotalTimeSeconds());

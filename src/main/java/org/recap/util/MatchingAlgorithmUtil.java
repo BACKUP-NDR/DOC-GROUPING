@@ -34,7 +34,6 @@ import java.io.IOException;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.recap.ScsbConstants.*;
@@ -876,35 +875,34 @@ public class MatchingAlgorithmUtil {
         }
     }
 
-    public void processBibIdGroupingMap(Set<Integer> bibIdSet, Map<Integer, UUID> identityMap, Map<UUID, Set<Integer>> map) {
+    public void processBibIdGroupingMap(Set<Integer> bibIdSet, Map<Integer, String> identityMap, Map<String, Set<Integer>> map, Map<Integer, String> bibIdAndIdentifierMap) {
         AtomicBoolean flag = new AtomicBoolean(false);
         try {
             if (map.size() == 0) {
-                UUID uuid = UUID.randomUUID();
+                String uuid = UUID.randomUUID().toString();
                 map.put(uuid, bibIdSet);
                 for (Integer bibId : bibIdSet) {
                     identityMap.put(bibId, uuid);
                 }
             } else {
                 Set<Integer> tempSet = new HashSet<>();
-                bibIdSet.stream().forEach(bibId -> {
-                    UUID identity = identityMap.get(bibId);
+                bibIdSet.forEach(bibId -> {
+                    String identity = identityMap.get(bibId);
                     if (identity != null && map.get(identity) != null) {
                         tempSet.addAll(map.get(identity));
                         map.remove(identity);
                         flag.set(true);
                     }
                 });
-
-                UUID uuid = UUID.randomUUID();
                 Set<Integer> set = new HashSet<>();
                 set.addAll(bibIdSet);
                 set.addAll(tempSet);
+                String uuid = isMatchingIdentityExist(set, bibIdAndIdentifierMap);
                 map.put(uuid, set);
-                set.stream().forEach(num -> identityMap.put(num, uuid));
+                set.forEach(num -> identityMap.put(num, uuid));
 
                 if (!flag.get()) {
-                    UUID uuidNew = UUID.randomUUID();
+                    String uuidNew = UUID.randomUUID().toString();
                     map.put(uuidNew, bibIdSet);
                     for (Integer bibId : bibIdSet) {
                         identityMap.put(bibId, uuidNew);
@@ -916,8 +914,17 @@ public class MatchingAlgorithmUtil {
         }
     }
 
-    public Map<UUID, LinkedHashSet<Integer>> processFinalIdentityGroupingMap(Map<Integer, UUID> identityMap) {
-        Map<UUID, LinkedHashSet<Integer>> finalIdentityGroupingMap = null;
+    private String isMatchingIdentityExist(Set<Integer> set, Map<Integer, String> bibIdAndIdentifierMap) {
+        String uuid;
+        Optional<String> matchingIdentity = set.stream().filter(bib -> StringUtils.isNotEmpty(bibIdAndIdentifierMap.get(bib)))
+                .map(bibIdAndIdentifierMap::get).findFirst();
+
+        uuid = matchingIdentity.orElseGet(() -> UUID.randomUUID().toString());
+        return uuid;
+    }
+
+    public Map<String, LinkedHashSet<Integer>> processFinalIdentityGroupingMap(Map<Integer, String> identityMap) {
+        Map<String, LinkedHashSet<Integer>> finalIdentityGroupingMap = null;
         try {
             finalIdentityGroupingMap = identityMap.entrySet().stream()
                     .collect(Collectors.groupingBy(Map.Entry::getValue)).values().stream()
@@ -936,27 +943,27 @@ public class MatchingAlgorithmUtil {
         return finalIdentityGroupingMap;
     }
 
-    public void updateMatchingIdentityInDb(Map<UUID, LinkedHashSet<Integer>> collect) {
+    public void updateMatchingIdentityInDb(Map<String, LinkedHashSet<Integer>> collect) {
         StopWatch stopWatch = new StopWatch();
         try {
             stopWatch.start();
-            int count =  collect.size() / 1000;  // 5502
-            int page= 0;
-            if ( collect.size() % 1000 != 0){
+            int count = collect.size() / 1000;
+            int page = 0;
+            if (collect.size() % 1000 != 0) {
                 count++;
             }
-            while(page < count){
-                updateInBatches(collect, page*1000, 1000 );
+            while (page < count) {
+                updateInBatches(collect, page * 1000, 1000);
                 page++;
             }
             stopWatch.stop();
-            logger.info("Time taken to update Matching Identity In Db in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
+            logger.info("Time taken to update Matching Identity In Db in 10K :  {} seconds ", stopWatch.getTotalTimeSeconds());
         } catch (Exception e) {
             logger.info("Exception occured while processing updating the final grouping map to db - {} ", e.getMessage());
         }
     }
 
-    public void updateInBatches(Map<UUID, LinkedHashSet<Integer>> collect, int skip, int limit) {
+    public void updateInBatches(Map<String, LinkedHashSet<Integer>> collect, int skip, int limit) {
         StringBuilder finalBibIdIdentifierQueryString = new StringBuilder();
         StringBuilder bibIds = new StringBuilder();
         StopWatch stopWatch = new StopWatch();
@@ -964,8 +971,8 @@ public class MatchingAlgorithmUtil {
         try {
             stopWatch.start();
             collect.entrySet().stream().skip(skip).limit(limit).forEach(e -> {
-                e.getValue().stream().forEach(bibId -> {
-                    finalBibIdIdentifierQueryString.append("WHEN " + bibId + " THEN '" + e.getKey().toString() + "'").append(" ");
+                e.getValue().forEach(bibId -> {
+                    finalBibIdIdentifierQueryString.append("WHEN ").append(bibId).append(" THEN '").append(e.getKey()).append("'").append(" ");
                     bibIds.append(bibId).append(",");
                 });
             });
@@ -975,11 +982,11 @@ public class MatchingAlgorithmUtil {
                     "WHERE BIBLIOGRAPHIC_ID IN (" + bibIds.substring(0, bibIds.length() - 1) + ")";
 
             stopWatch.stop();
-            logger.info("Time taken to build query string Matching Identity :  {} seconds ",stopWatch.getTotalTimeSeconds());
+            logger.info("Time taken to build query string Matching Identity :  {} seconds ", stopWatch.getTotalTimeSeconds());
             stopWatchUpdateDb.start();
             jdbcTemplate.batchUpdate(query);
             stopWatchUpdateDb.stop();
-            logger.info("Time taken to update Matching Identity In Db in 1000s:  {} seconds ",stopWatchUpdateDb.getTotalTimeSeconds());
+            logger.info("Time taken to update Matching Identity In Db in 1000s:  {} seconds ", stopWatchUpdateDb.getTotalTimeSeconds());
         } catch (Exception e) {
             logger.info("Exception occured while processing updating the final grouping map to db in batches - {} ", e.getMessage());
         }
