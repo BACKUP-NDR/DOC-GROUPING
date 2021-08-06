@@ -964,10 +964,7 @@ public class MatchingAlgorithmUtil {
     public void updateInBatches(Map<String, LinkedHashSet<Integer>> collect, int skip, int limit) {
         StringBuilder finalBibIdIdentifierQueryString = new StringBuilder();
         StringBuilder bibIds = new StringBuilder();
-        StopWatch stopWatch = new StopWatch();
-        StopWatch stopWatchUpdateDb = new StopWatch();
         try {
-            stopWatch.start();
             collect.entrySet().stream().skip(skip).limit(limit).forEach(e -> {
                 e.getValue().forEach(bibId -> {
                     finalBibIdIdentifierQueryString.append("WHEN ").append(bibId).append(" THEN '").append(e.getKey()).append("'").append(" ");
@@ -979,12 +976,7 @@ public class MatchingAlgorithmUtil {
                     "SET MATCHING_IDENTITY = ( CASE BIBLIOGRAPHIC_ID " + finalBibIdIdentifierQueryString + " END) " +
                     "WHERE BIBLIOGRAPHIC_ID IN (" + bibIds.substring(0, bibIds.length() - 1) + ")";
 
-            stopWatch.stop();
-            logger.info("Time taken to build query string Matching Identity :  {} seconds ", stopWatch.getTotalTimeSeconds());
-            stopWatchUpdateDb.start();
             jdbcTemplate.batchUpdate(query);
-            stopWatchUpdateDb.stop();
-            logger.info("Time taken to update Matching Identity In Db in 1000s:  {} seconds ", stopWatchUpdateDb.getTotalTimeSeconds());
         } catch (Exception e) {
             logger.info("Exception occured while processing updating the final grouping map to db in batches - {} ", e.getMessage());
         }

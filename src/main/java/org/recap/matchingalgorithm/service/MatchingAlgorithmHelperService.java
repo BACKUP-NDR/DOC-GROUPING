@@ -436,7 +436,6 @@ public class MatchingAlgorithmHelperService {
     }
 
     public String groupBibsForMonograph(Integer batchSize, Boolean isPendingMatch) {
-        StopWatch stopWatch = new StopWatch();
         long countOfRecordNum;
         if (isPendingMatch) {
             countOfRecordNum = reportDataDetailsRepository.getCountOfRecordNumForMatchingPendingMonograph(ScsbCommonConstants.BIB_ID);
@@ -450,7 +449,10 @@ public class MatchingAlgorithmHelperService {
         logger.info("Batch count - {}", totalPagesCount);
         while (pageNum < totalPagesCount + 1) {
             logger.info("Executing the current Batch count for Monograph- {} - Batch count - {} -", pageNum, totalPagesCount);
+            StopWatch stopWatch = new StopWatch();
             stopWatch.start();
+            StopWatch stopWatchForReportDataQuery = new StopWatch();
+            stopWatchForReportDataQuery.start();
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities;
             if (isPendingMatch) {
@@ -458,8 +460,12 @@ public class MatchingAlgorithmHelperService {
             } else {
                 reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingMonographs(ScsbCommonConstants.BIB_ID, from, batchSize);
             }
+            stopWatchForReportDataQuery.stop();
+            logger.info("Time taken to get the report data entity from db :  {} seconds ",stopWatch.getTotalTimeSeconds());
             populateMatchingIdentifier(reportDataEntities);
+            logger.info("Before clearing the reportDataEntities");
             reportDataEntities.clear();
+            logger.info("After clearing the reportDataEntities");
             stopWatch.stop();
             logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
             pageNum++;
@@ -499,7 +505,6 @@ public class MatchingAlgorithmHelperService {
             stopWatch.start();
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingSerials(ScsbCommonConstants.BIB_ID, from, batchSize);
-
             populateMatchingIdentifier(reportDataEntities);
             reportDataEntities.clear();
             stopWatch.stop();
@@ -514,6 +519,7 @@ public class MatchingAlgorithmHelperService {
         StopWatch stopWatch = new StopWatch();
         StopWatch stopWatchQuery = new StopWatch();
         try {
+            logger.info("Into the populateMatchingIdentifier method");
             stopWatch.start();
             stopWatchQuery.start();
             Set<Set<Integer>> finalBibSetOfSets = reportDataEntities.parallelStream().map(this::getBibIdSetFromString).collect(Collectors.toSet());
