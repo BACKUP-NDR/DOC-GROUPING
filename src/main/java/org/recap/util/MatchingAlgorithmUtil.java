@@ -14,10 +14,7 @@ import org.recap.PropertyKeyConstants;
 import org.recap.ScsbCommonConstants;
 import org.recap.ScsbConstants;
 import org.recap.matchingalgorithm.MatchingCounter;
-import org.recap.model.jpa.MatchingBibEntity;
-import org.recap.model.jpa.MatchingMatchPointsEntity;
-import org.recap.model.jpa.ReportDataEntity;
-import org.recap.model.jpa.ReportEntity;
+import org.recap.model.jpa.*;
 import org.recap.repository.jpa.*;
 import org.recap.service.accession.SolrIndexService;
 import org.slf4j.Logger;
@@ -34,6 +31,7 @@ import java.io.IOException;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.recap.ScsbConstants.*;
@@ -875,7 +873,7 @@ public class MatchingAlgorithmUtil {
         }
     }
 
-    public void processBibIdGroupingMap(Set<Integer> bibIdSet, Map<Integer, String> identityMap, Map<String, Set<Integer>> map, Map<Integer, String> bibIdAndIdentifierMap) {
+    public void processBibIdGroupingMap(Set<Integer> bibIdSet, Map<Integer, String> identityMap, Map<String, Set<Integer>> map, Map<Integer, BibliographicEntity> bibIdAndBibEntityMap) {
         AtomicBoolean flag = new AtomicBoolean(false);
         try {
             if (map.size() == 0) {
@@ -897,7 +895,7 @@ public class MatchingAlgorithmUtil {
                 Set<Integer> set = new HashSet<>();
                 set.addAll(bibIdSet);
                 set.addAll(tempSet);
-                String uuid = isMatchingIdentityExist(set, bibIdAndIdentifierMap);
+                String uuid = isMatchingIdentityExist(set, bibIdAndBibEntityMap);
                 map.put(uuid, set);
                 set.forEach(num -> identityMap.put(num, uuid));
 
@@ -914,10 +912,10 @@ public class MatchingAlgorithmUtil {
         }
     }
 
-    private String isMatchingIdentityExist(Set<Integer> set, Map<Integer, String> bibIdAndIdentifierMap) {
+    private String isMatchingIdentityExist(Set<Integer> set, Map<Integer, BibliographicEntity> bibIdAndBibEntityMap) {
         String uuid;
-        Optional<String> matchingIdentity = set.stream().filter(bib -> StringUtils.isNotEmpty(bibIdAndIdentifierMap.get(bib)))
-                .map(bibIdAndIdentifierMap::get).findFirst();
+        Optional<String> matchingIdentity = set.stream().filter(bib -> StringUtils.isNotEmpty(bibIdAndBibEntityMap.get(bib).getMatchingIdentity()))
+                .map(bib -> bibIdAndBibEntityMap.get(bib).getMatchingIdentity()).findFirst();
 
         uuid = matchingIdentity.orElseGet(() -> UUID.randomUUID().toString());
         return uuid;
@@ -990,5 +988,12 @@ public class MatchingAlgorithmUtil {
         } catch (Exception e) {
             logger.info("Exception occured while processing updating the final grouping map to db in batches - {} ", e.getMessage());
         }
+    }
+
+    public Map<Integer, BibliographicEntity> getBibIdAndBibEntityMap(Set<Integer> bibIdsList){
+        List<BibliographicEntity> bibliographicEntityList = bibliographicDetailsRepository.findByIdIn(bibIdsList.stream().collect(Collectors.toList()));
+        Map<Integer, BibliographicEntity> bibliographicEntityMap = bibliographicEntityList.stream().collect(Collectors.toMap(BibliographicEntity::getId, Function
+                .identity()));
+        return bibliographicEntityMap;
     }
 }

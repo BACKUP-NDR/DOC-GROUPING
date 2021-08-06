@@ -8,10 +8,7 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.recap.ScsbCommonConstants;
 import org.recap.ScsbConstants;
 import org.recap.executors.SaveMatchingBibsCallable;
-import org.recap.model.jpa.MatchingBibEntity;
-import org.recap.model.jpa.MatchingMatchPointsEntity;
-import org.recap.model.jpa.ReportDataEntity;
-import org.recap.model.jpa.ReportEntity;
+import org.recap.model.jpa.*;
 import org.recap.repository.jpa.InstitutionDetailsRepository;
 import org.recap.repository.jpa.MatchingBibDetailsRepository;
 import org.recap.repository.jpa.MatchingMatchPointsDetailsRepository;
@@ -462,7 +459,7 @@ public class MatchingAlgorithmHelperService {
                 reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingMonographs(ScsbCommonConstants.BIB_ID, from, batchSize);
             }
             populateMatchingIdentifier(reportDataEntities);
-           // reportDataEntities.clear();
+            reportDataEntities.clear();
             stopWatch.stop();
             logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
             pageNum++;
@@ -502,6 +499,7 @@ public class MatchingAlgorithmHelperService {
             stopWatch.start();
             long from = pageNum * Long.valueOf(batchSize);
             List<ReportDataEntity> reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingSerials(ScsbCommonConstants.BIB_ID, from, batchSize);
+
             populateMatchingIdentifier(reportDataEntities);
             reportDataEntities.clear();
             stopWatch.stop();
@@ -511,39 +509,24 @@ public class MatchingAlgorithmHelperService {
     }
 
     private void populateMatchingIdentifier(List<ReportDataEntity> reportDataEntities) {
-        Set<Set<Integer>> finalBibSetOfSets = reportDataEntities.parallelStream().map(this::getBibIdSetFromString).collect(Collectors.toSet());
         Map<String, Set<Integer>> bibIdMap = new LinkedHashMap<>();
         Map<Integer, String> identityMap = new LinkedHashMap<>();
         StopWatch stopWatch = new StopWatch();
         StopWatch stopWatchQuery = new StopWatch();
-        StopWatch stopWatchProcess = new StopWatch();
         try {
             stopWatch.start();
             stopWatchQuery.start();
-            Set<Integer> bidIds = finalBibSetOfSets.parallelStream().flatMap(Collection::stream).collect(Collectors.toSet());
-            MapSqlParameterSource parameters = new MapSqlParameterSource();
-            parameters.addValue("ids", bidIds);
-            String sql = "select BIBLIOGRAPHIC_ID, MATCHING_IDENTITY from bibliographic_t where BIBLIOGRAPHIC_ID IN (:ids)";
-
-            Map<Integer, String> bibIdAndIdentifierMap =   jdbcTemplate.query(sql,
-                    parameters, (ResultSet rs) -> {
-                        HashMap<Integer,String> results = new HashMap<>();
-                        while (rs.next()) {
-                            results.put(rs.getInt("BIBLIOGRAPHIC_ID"), rs.getString("MATCHING_IDENTITY"));
-                        }
-                        return results;
-                    });
+            Set<Set<Integer>> finalBibSetOfSets = reportDataEntities.parallelStream().map(this::getBibIdSetFromString).collect(Collectors.toSet());
+            Set<Integer> bibIdsList = finalBibSetOfSets.parallelStream().flatMap(Collection::stream).collect(Collectors.toSet());
+            Map<Integer, BibliographicEntity> bibIdAndBibEntityMap = matchingAlgorithmUtil.getBibIdAndBibEntityMap(bibIdsList);
 
             stopWatchQuery.stop();
-            logger.info("Time taken to  build bibIdAndIdentifierMap:  {} seconds ",stopWatchQuery.getTotalTimeSeconds());
+            logger.info("Time taken to  build bibIdAndBibEntityMap:  {} seconds ",stopWatchQuery.getTotalTimeSeconds());
 
-            stopWatchProcess.start();
             finalBibSetOfSets.forEach(bibIdSet -> {
-                matchingAlgorithmUtil.processBibIdGroupingMap(bibIdSet, identityMap, bibIdMap, bibIdAndIdentifierMap);
+                matchingAlgorithmUtil.processBibIdGroupingMap(bibIdSet, identityMap, bibIdMap, bibIdAndBibEntityMap);
             });
-            stopWatchProcess.stop();
-            logger.info("Time taken to process Matching Identifier grouping iteration:  {} seconds ",stopWatchProcess.getTotalTimeSeconds());
-         //   bibIdAndIdentifierMap.clear();
+            bibIdAndBibEntityMap.clear();
         } catch (Exception e) {
             logger.info("Exception occured - {}", e.getMessage());
         } finally {
