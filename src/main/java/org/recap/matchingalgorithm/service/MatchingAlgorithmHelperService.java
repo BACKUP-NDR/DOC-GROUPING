@@ -461,7 +461,7 @@ public class MatchingAlgorithmHelperService {
                 reportDataEntities = reportDataDetailsRepository.getReportDataEntityForMatchingMonographs(ScsbCommonConstants.BIB_ID, from, batchSize);
             }
             stopWatchForReportDataQuery.stop();
-            logger.info("Time taken to get the report data entity from db :  {} seconds ",stopWatch.getTotalTimeSeconds());
+            logger.info("Time taken to get the report data entity from db :  {} seconds ",stopWatchForReportDataQuery.getTotalTimeSeconds());
             populateMatchingIdentifier(reportDataEntities);
             logger.info("Before clearing the reportDataEntities");
             reportDataEntities.clear();
