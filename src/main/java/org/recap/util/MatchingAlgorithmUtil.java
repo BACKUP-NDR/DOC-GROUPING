@@ -3,6 +3,7 @@ package org.recap.util;
 import com.google.common.collect.Lists;
 import org.apache.camel.ProducerTemplate;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -875,9 +876,10 @@ public class MatchingAlgorithmUtil {
 
     public void processBibIdGroupingMap(Set<Integer> bibIdSet, Map<Integer, String> identityMap, Map<String, Set<Integer>> map, Map<Integer, BibliographicEntity> bibIdAndBibEntityMap) {
         AtomicBoolean flag = new AtomicBoolean(false);
+        final int SHORT_ID_LENGTH = 8;
         try {
             if (map.size() == 0) {
-                String uuid = UUID.randomUUID().toString();
+                String uuid = isMatchingIdentityExist(bibIdSet, bibIdAndBibEntityMap);
                 map.put(uuid, bibIdSet);
                 for (Integer bibId : bibIdSet) {
                     identityMap.put(bibId, uuid);
@@ -900,7 +902,7 @@ public class MatchingAlgorithmUtil {
                 set.forEach(num -> identityMap.put(num, uuid));
 
                 if (!flag.get()) {
-                    String uuidNew = UUID.randomUUID().toString();
+                    String uuidNew = RandomStringUtils.random(SHORT_ID_LENGTH);
                     map.put(uuidNew, bibIdSet);
                     for (Integer bibId : bibIdSet) {
                         identityMap.put(bibId, uuidNew);
@@ -913,12 +915,15 @@ public class MatchingAlgorithmUtil {
     }
 
     private String isMatchingIdentityExist(Set<Integer> set, Map<Integer, BibliographicEntity> bibIdAndBibEntityMap) {
-        String uuid;
-        Optional<String> matchingIdentity = set.stream().filter(bib -> StringUtils.isNotEmpty(bibIdAndBibEntityMap.get(bib).getMatchingIdentity()))
-                .map(bib -> bibIdAndBibEntityMap.get(bib).getMatchingIdentity()).findFirst();
-
-        uuid = matchingIdentity.orElseGet(() -> UUID.randomUUID().toString());
-        return uuid;
+        final int SHORT_ID_LENGTH = 8;
+        String matchingIdentity = null;
+        for(Integer bibId : set){
+            matchingIdentity = bibIdAndBibEntityMap.get(bibId).getMatchingIdentity();
+        }
+        if(matchingIdentity == null)
+            return  RandomStringUtils.random(SHORT_ID_LENGTH);
+        else
+            return matchingIdentity;
     }
 
     public Map<String, LinkedHashSet<Integer>> processFinalIdentityGroupingMap(Map<Integer, String> identityMap) {
@@ -947,7 +952,7 @@ public class MatchingAlgorithmUtil {
             stopWatch.start();
             int count = collect.size() / 1000;
             int page = 0;
-            if (collect.size() % 1000 != 0) {
+            if (collect.size() % 10 != 0) {
                 count++;
             }
             while (page < count) {
