@@ -15,8 +15,16 @@ import org.recap.PropertyKeyConstants;
 import org.recap.ScsbCommonConstants;
 import org.recap.ScsbConstants;
 import org.recap.matchingalgorithm.MatchingCounter;
-import org.recap.model.jpa.*;
-import org.recap.repository.jpa.*;
+import org.recap.model.jpa.BibliographicEntity;
+import org.recap.model.jpa.MatchingBibEntity;
+import org.recap.model.jpa.MatchingMatchPointsEntity;
+import org.recap.model.jpa.ReportDataEntity;
+import org.recap.model.jpa.ReportEntity;
+import org.recap.repository.jpa.BibliographicDetailsRepository;
+import org.recap.repository.jpa.MatchingBibDetailsRepository;
+import org.recap.repository.jpa.MatchingMatchPointsDetailsRepository;
+import org.recap.repository.jpa.ReportDataDetailsRepository;
+import org.recap.repository.jpa.ReportDetailRepository;
 import org.recap.service.accession.SolrIndexService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,9 +38,18 @@ import org.springframework.util.StopWatch;
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.text.Normalizer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.recap.ScsbConstants.*;
@@ -986,23 +1003,56 @@ public class MatchingAlgorithmUtil {
         }
     }
 
-    public Map<Integer, String> getBibIdAndBibEntityMap(Set<Integer> bibIdsList){
+    public Map<Integer, String> getBibIdAndBibEntityMap(Set<Integer> bibIdsList) {
         Map<Integer, String> bibliographicEntityMap = new HashMap<>();
         StopWatch bibPullTime = new StopWatch();
         bibPullTime.start();
         logger.info("TIME START pulling list of BIBENTITIES");
-        List<BibliographicEntity> bibliographicEntityList = bibliographicDetailsRepository.findByIdIn(bibIdsList.stream().collect(Collectors.toList()));
-        logger.info("TIME END pulling list of BIBENTITIES {}",bibPullTime.getTotalTimeSeconds());
+        ArrayList<Set<Integer>> listOfBibSets = getListofListBibEntities(bibIdsList);
+        ArrayList<List<BibliographicEntity>> bibliographicEntityListOfList = pullBibEntitiesList(listOfBibSets);
+        logger.info("TIME END pulling list of BIBENTITIES {}", bibPullTime.getTotalTimeSeconds());
         bibPullTime.stop();
         bibPullTime.start();
         logger.info("TIME START prepare list of bib,identifier");
-        for(BibliographicEntity bibliographicEntity: bibliographicEntityList){
-            if(bibliographicEntity.getMatchingIdentity() != null){
-                bibliographicEntityMap.put(bibliographicEntity.getId(),bibliographicEntity.getMatchingIdentity());
+        for (List<BibliographicEntity> bibliographicEntityList : bibliographicEntityListOfList) {
+            for (BibliographicEntity bibliographicEntity : bibliographicEntityList) {
+                if (bibliographicEntity.getMatchingIdentity() != null) {
+                    bibliographicEntityMap.put(bibliographicEntity.getId(), bibliographicEntity.getMatchingIdentity());
+                }
             }
         }
         logger.info("TIME END prepare list of bib,identifier {}",bibPullTime.getTotalTimeSeconds());
         bibPullTime.stop();
         return bibliographicEntityMap;
+    }
+
+    private ArrayList<List<BibliographicEntity>> pullBibEntitiesList(ArrayList<Set<Integer>> listOfBibSets) {
+        ArrayList<List<BibliographicEntity>> bibliographicEntityList = new ArrayList<>();
+        for(Set<Integer> bibSet : listOfBibSets){
+            List<BibliographicEntity> bibliographicEntitySet = bibliographicDetailsRepository.findByIdIn(bibSet.stream().collect(Collectors.toList()));
+            bibliographicEntityList.add(bibliographicEntitySet);
+        }
+        return bibliographicEntityList;
+    }
+
+    private ArrayList<Set<Integer>> getListofListBibEntities(Set<Integer> bibIdsList) {
+        ArrayList<Set<Integer>> result = new ArrayList<>();
+        int count = bibIdsList.size() / 500;
+        if (500 > bibIdsList.size()) {
+            result = new ArrayList<Set<Integer>>(count);
+            Iterator<Integer> it = bibIdsList.iterator();
+            int each = bibIdsList.size() / count;
+            for (int i = 0; i < count; i++) {
+                HashSet<Integer> s = new HashSet<Integer>(bibIdsList.size() / count + 1);
+                result.add(s);
+                for (int j = 0; j < each && it.hasNext(); j++) {
+                    s.add(it.next());
+                }
+            }
+            return result;
+        } else {
+            result.add(bibIdsList);
+            return result;
+        }
     }
 }
