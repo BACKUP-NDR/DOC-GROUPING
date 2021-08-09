@@ -449,8 +449,8 @@ public class MatchingAlgorithmHelperService {
         logger.info("Batch count - {}", totalPagesCount);
         while (pageNum < totalPagesCount + 1) {
             logger.info("Executing the current Batch count for Monograph- {} - Batch count - {} -", pageNum, totalPagesCount);
-            StopWatch stopWatch = new StopWatch();
-            stopWatch.start();
+            StopWatch stopWatchtotal = new StopWatch();
+            stopWatchtotal.start();
             StopWatch stopWatchForReportDataQuery = new StopWatch();
             stopWatchForReportDataQuery.start();
             long from = pageNum * Long.valueOf(batchSize);
@@ -466,8 +466,8 @@ public class MatchingAlgorithmHelperService {
             logger.info("Before clearing the reportDataEntities");
             reportDataEntities.clear();
             logger.info("After clearing the reportDataEntities");
-            stopWatch.stop();
-            logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatch.getTotalTimeSeconds());
+            stopWatchtotal.stop();
+            logger.info("Time taken to process grouping in batches in 10K :  {} seconds ",stopWatchtotal.getTotalTimeSeconds());
             pageNum++;
         }
         return "Success";

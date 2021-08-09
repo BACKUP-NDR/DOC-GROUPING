@@ -995,7 +995,7 @@ public class MatchingAlgorithmUtil {
         logger.info("TIME END pulling list of BIBENTITIES {}",bibPullTime.getTotalTimeSeconds());
         bibPullTime.stop();
         bibPullTime.start();
-        logger.info("TIME START prepare list of bib,identifier {}");
+        logger.info("TIME START prepare list of bib,identifier");
         for(BibliographicEntity bibliographicEntity: bibliographicEntityList){
             if(bibliographicEntity.getMatchingIdentity() != null){
                 bibliographicEntityMap.put(bibliographicEntity.getId(),bibliographicEntity.getMatchingIdentity());
