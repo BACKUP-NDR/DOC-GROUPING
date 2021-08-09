@@ -527,7 +527,7 @@ public class MatchingAlgorithmHelperService {
             Map<Integer, BibliographicEntity> bibIdAndBibEntityMap = matchingAlgorithmUtil.getBibIdAndBibEntityMap(bibIdsList);
 
             stopWatchQuery.stop();
-            logger.info("Time taken to  build bibIdAndBibEntityMap:  {} seconds ",stopWatchQuery.getTotalTimeSeconds());
+            logger.info("Time taken to  build bibIdAndBibEntityMap:  {} seconds and bibIdAndBibEntityMap size: {}",stopWatchQuery.getTotalTimeSeconds(),bibIdAndBibEntityMap.size());
 
             finalBibSetOfSets.forEach(bibIdSet -> {
                 matchingAlgorithmUtil.processBibIdGroupingMap(bibIdSet, identityMap, bibIdMap, bibIdAndBibEntityMap);
@@ -537,7 +537,9 @@ public class MatchingAlgorithmHelperService {
             logger.info("Exception occured - {}", e.getMessage());
         } finally {
             Map<String, LinkedHashSet<Integer>> finalIdentityGroupingMap = matchingAlgorithmUtil.processFinalIdentityGroupingMap(identityMap);
+            identityMap.clear();
             matchingAlgorithmUtil.updateMatchingIdentityInDb(finalIdentityGroupingMap);
+            finalIdentityGroupingMap.clear();
             stopWatch.stop();
             logger.info("Time taken to populate Matching Identifier :  {} seconds ",stopWatch.getTotalTimeSeconds());
         }

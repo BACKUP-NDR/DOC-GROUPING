@@ -876,7 +876,6 @@ public class MatchingAlgorithmUtil {
 
     public void processBibIdGroupingMap(Set<Integer> bibIdSet, Map<Integer, String> identityMap, Map<String, Set<Integer>> map, Map<Integer, BibliographicEntity> bibIdAndBibEntityMap) {
         AtomicBoolean flag = new AtomicBoolean(false);
-        final int SHORT_ID_LENGTH = 8;
         try {
             if (map.size() == 0) {
                 String uuid = isMatchingIdentityExist(bibIdSet, bibIdAndBibEntityMap);
@@ -902,7 +901,7 @@ public class MatchingAlgorithmUtil {
                 set.forEach(num -> identityMap.put(num, uuid));
 
                 if (!flag.get()) {
-                    String uuidNew = RandomStringUtils.random(SHORT_ID_LENGTH);
+                    String uuidNew = isMatchingIdentityExist(bibIdSet, bibIdAndBibEntityMap);
                     map.put(uuidNew, bibIdSet);
                     for (Integer bibId : bibIdSet) {
                         identityMap.put(bibId, uuidNew);
