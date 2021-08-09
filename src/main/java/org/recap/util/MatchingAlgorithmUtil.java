@@ -874,7 +874,7 @@ public class MatchingAlgorithmUtil {
         }
     }
 
-    public void processBibIdGroupingMap(Set<Integer> bibIdSet, Map<Integer, String> identityMap, Map<String, Set<Integer>> map, Map<Integer, BibliographicEntity> bibIdAndBibEntityMap) {
+    public void processBibIdGroupingMap(Set<Integer> bibIdSet, Map<Integer, String> identityMap, Map<String, Set<Integer>> map, Map<Integer, String> bibIdAndBibEntityMap) {
         AtomicBoolean flag = new AtomicBoolean(false);
         try {
             if (map.size() == 0) {
@@ -913,11 +913,11 @@ public class MatchingAlgorithmUtil {
         }
     }
 
-    private String isMatchingIdentityExist(Set<Integer> set, Map<Integer, BibliographicEntity> bibIdAndBibEntityMap) {
+    private String isMatchingIdentityExist(Set<Integer> set, Map<Integer, String> bibIdAndBibEntityMap) {
         final int SHORT_ID_LENGTH = 8;
         String matchingIdentity = null;
         for(Integer bibId : set){
-            matchingIdentity = bibIdAndBibEntityMap.get(bibId).getMatchingIdentity();
+            matchingIdentity = bibIdAndBibEntityMap.get(bibId);
         }
         if(matchingIdentity == null)
             return  RandomStringUtils.random(SHORT_ID_LENGTH);
@@ -986,10 +986,23 @@ public class MatchingAlgorithmUtil {
         }
     }
 
-    public Map<Integer, BibliographicEntity> getBibIdAndBibEntityMap(Set<Integer> bibIdsList){
+    public Map<Integer, String> getBibIdAndBibEntityMap(Set<Integer> bibIdsList){
+        Map<Integer, String> bibliographicEntityMap = new HashMap<>();
+        StopWatch bibPullTime = new StopWatch();
+        bibPullTime.start();
+        logger.info("TIME START pulling list of BIBENTITIES");
         List<BibliographicEntity> bibliographicEntityList = bibliographicDetailsRepository.findByIdIn(bibIdsList.stream().collect(Collectors.toList()));
-        Map<Integer, BibliographicEntity> bibliographicEntityMap = bibliographicEntityList.stream().collect(Collectors.toMap(BibliographicEntity::getId, Function
-                .identity()));
+        logger.info("TIME END pulling list of BIBENTITIES {}",bibPullTime.getTotalTimeSeconds());
+        bibPullTime.stop();
+        bibPullTime.start();
+        logger.info("TIME START prepare list of bib,identifier {}");
+        for(BibliographicEntity bibliographicEntity: bibliographicEntityList){
+            if(bibliographicEntity.getMatchingIdentity() != null){
+                bibliographicEntityMap.put(bibliographicEntity.getId(),bibliographicEntity.getMatchingIdentity());
+            }
+        }
+        logger.info("TIME END prepare list of bib,identifier {}",bibPullTime.getTotalTimeSeconds());
+        bibPullTime.stop();
         return bibliographicEntityMap;
     }
 }

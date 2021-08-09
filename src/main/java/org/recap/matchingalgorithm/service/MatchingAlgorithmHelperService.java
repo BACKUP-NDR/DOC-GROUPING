@@ -524,7 +524,7 @@ public class MatchingAlgorithmHelperService {
             stopWatchQuery.start();
             Set<Set<Integer>> finalBibSetOfSets = reportDataEntities.parallelStream().map(this::getBibIdSetFromString).collect(Collectors.toSet());
             Set<Integer> bibIdsList = finalBibSetOfSets.parallelStream().flatMap(Collection::stream).collect(Collectors.toSet());
-            Map<Integer, BibliographicEntity> bibIdAndBibEntityMap = matchingAlgorithmUtil.getBibIdAndBibEntityMap(bibIdsList);
+            Map<Integer, String> bibIdAndBibEntityMap = matchingAlgorithmUtil.getBibIdAndBibEntityMap(bibIdsList);
 
             stopWatchQuery.stop();
             logger.info("Time taken to  build bibIdAndBibEntityMap:  {} seconds and bibIdAndBibEntityMap size: {}",stopWatchQuery.getTotalTimeSeconds(),bibIdAndBibEntityMap.size());
